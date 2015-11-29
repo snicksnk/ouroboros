@@ -1,5 +1,5 @@
 import os, re
-import unittest
+import unittest, copy
 from jinja2 import Template
 from subprocess import call
 
@@ -8,14 +8,36 @@ from subprocess import call
 data = {
     'source-path': '/var/www/urobo/template',
     'target-path': '/var/www/urobo/result',
-    'module-name': 'Video',
+    'module-name': 'Settings',
     'controllers':
     {
-        'index':{
-            'actions':{
-                'index':"assa",
-                'get':"ssasa"
+        'index': {
+            'index'
+        },
+        'general': {
+            'actions': {
+                'index': "assa",
+                'save': "ssasa"
             }
+        },
+        'blocking': {
+            'actions': {
+                'index': "",
+                'search-user': "",
+                'comment': "",
+                'message': ""
+            }
+        }
+    },
+    'service': {
+        'Settings': ""
+    },
+    'repository': {
+        'Settings': ""
+    },
+    'forms': {
+        "Settings":{
+
         }
     }
 
@@ -66,11 +88,11 @@ class Processor:
 
     def add_file(self, file_path):
 
-        file = File(path=file_path, source_path=self.source_path, target_path=self.source_path, current_path = '')
+        file = File(path=file_path)
         self.process_with_processors(file)
 
     def add_dir(self, dir_path):
-        dir = Dir(path=dir_path, source_path=self.source_path, target_path=self.source_path, current_path = '')
+        dir = Dir(path=dir_path)
         self.process_with_processors(dir)
 
     def process_with_processors(self, file_system_elm):
@@ -84,7 +106,7 @@ class Processor:
         self.replaces[source_name] = real_name
 
     def replace_path_parts_by_replacers(self, file_system_elm):
-        path = file_system_elm.path
+        path = file_system_elm.save_path
         for source_name, real_name in self.replaces.iteritems():
             path = re.sub(re.compile(source_name), real_name, path)
 
@@ -97,9 +119,11 @@ class Processor:
         os.makedirs(target_dir_path)
 
     def render_template(self, file_data):
-        return file_data
+        template = Template(file_data.decode('utf-8'))
+        return template.render(__config=self.config)
 
     def create_file(self, file):
+
         source_path = os.path.join(self.source_path, file.path)
         f = open(source_path, "r")
         file_data = f.read()
@@ -121,14 +145,22 @@ class FileSystemElem(object):
     is_dir = False
     is_file = False
 
-    def __init__(self, path, source_path = '', target_path = '', current_path = ''):
+    def __init__(self, path):
         self._path = None
         self.path = path
         self.parent = None
-        self.target_path = source_path
-        self.source_path = target_path
-        self.current_path = current_path
+        self._save_path = None
 
+    @property
+    def save_path(self):
+        if not self._save_path:
+            return self.path
+        else:
+            return self._save_path
+
+    @save_path.setter
+    def save_path(self, save_path):
+        self._save_path = save_path
 
     @property
     def path(self):
@@ -152,6 +184,9 @@ class Dir(FileSystemElem):
 class File(FileSystemElem):
     is_file = True
     pass
+
+
+
 
 
 class FilesProcessors:
@@ -189,6 +224,29 @@ class DirProcessor(FilesProcessors):
 
 
 
+class RepeatFile(FilesProcessors):
+    name = 'RepeatFile'
+
+    def get_name_parts(self, file_system_elem):
+        p = re.compile('^__rpt_([^.]+)(.+)')
+        result = p.findall(file_system_elem.name)
+        if result:
+            return result[0][0], result[0][1]
+
+    def check_is_need(self, file_system_elem):
+        result = self.get_name_parts(file_system_elem)
+        if result:
+            return True
+
+    def process(self, file_system_elem):
+        config_name, file_name_part = self.get_name_parts(file_system_elem)
+        for name, data in self.processor.config[config_name].iteritems():
+            self.processor.config['_'+config_name] = data
+            new_file = copy.copy(file_system_elem)
+            new_file.save_path = os.path.join(new_file.parent_dir, name+file_name_part)
+            self.processor.create_file(new_file)
+
+
 class TypicalFile(FilesProcessors):
     name = 'TypicalFile'
 
@@ -197,6 +255,16 @@ class TypicalFile(FilesProcessors):
             return True
 
     def process(self, file):
+        #TODO fix it. diff from dir
+        p = re.compile('^__rnm_([^.]+)(.+)')
+        result = p.findall(file.name)
+        if result:
+            #diff from dir
+            math_text = result[0][0]
+            source_path = os.path.join(file.parent_dir, file.name)
+            real_name = os.path.join(file.parent_dir, self.processor.config[math_text] + result[0][1])
+            self.processor.add_dir_replace(source_path, real_name)
+
         self.processor.create_file(file)
 
 
@@ -207,6 +275,7 @@ source = FilesSource(data)
 processor = Processor(data)
 processor.target_path = 'result'
 processor.source_path = data['source-path']
+processor.add_file_processor(RepeatFile)
 processor.add_file_processor(TypicalFile)
 processor.add_file_processor(DirProcessor)
 
