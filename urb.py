@@ -38,7 +38,7 @@ class FilesSource:
     def get_files(self):
         for subdir, dirs, files in os.walk(self.rootDir):
             subdir_relative_path = self.get_relative_path(subdir, self.rootDir);
-            if (len(subdir_relative_path)<1):
+            if len(subdir_relative_path) < 1:
                 continue
 
             self.processor.add_dir(subdir_relative_path)
@@ -60,31 +60,60 @@ class Processor:
         self.current_dir = Dir(path='')
         self.replaces = {}
 
-
     def add_file_processor(self, file_processor):
         self.processors[file_processor.name] = file_processor
         pass
 
     def add_file(self, file_path):
-        file = File(path=file_path, source_path=self.source_path, target_path=self.source_path, current_path = '')
 
+        file = File(path=file_path, source_path=self.source_path, target_path=self.source_path, current_path = '')
+        self.process_with_processors(file)
 
     def add_dir(self, dir_path):
         dir = Dir(path=dir_path, source_path=self.source_path, target_path=self.source_path, current_path = '')
+        self.process_with_processors(dir)
+
+    def process_with_processors(self, file_system_elm):
         for name, Processor in self.processors.iteritems():
             processor = Processor(self)
-            if (processor.check_is_need(dir)):
-                processor.process(dir)
+            if processor.check_is_need(file_system_elm):
+                processor.process(file_system_elm)
+
 
     def add_dir_replace(self, source_name, real_name):
         self.replaces[source_name] = real_name
 
-    def create_dir(self, dir):
-        path = dir.path
+    def replace_path_parts_by_replacers(self, file_system_elm):
+        path = file_system_elm.path
         for source_name, real_name in self.replaces.iteritems():
             path = re.sub(re.compile(source_name), real_name, path)
 
-        print 'create dir  ' + os.path.join(self.target_path, path)
+        return path
+
+    def create_dir(self, dir):
+        path = self.replace_path_parts_by_replacers(dir)
+        target_dir_path = os.path.join(self.target_path, path)
+        print 'create dir  ' + target_dir_path
+        os.makedirs(target_dir_path)
+
+    def render_template(self, file_data):
+        return file_data
+
+    def create_file(self, file):
+        source_path = os.path.join(self.source_path, file.path)
+        f = open(source_path, "r")
+        file_data = f.read()
+
+        path = self.replace_path_parts_by_replacers(file)
+        target_file_path = os.path.join(self.target_path, path)
+
+        rendered_data = self.render_template(file_data)
+
+        result_file = open(target_file_path, "w+")
+
+        print 'create file ' + target_file_path
+        result_file.write(rendered_data)
+
 
 
 
@@ -109,7 +138,6 @@ class FileSystemElem(object):
     def path(self, path):
         self.parent_dir = os.path.dirname(path)
         self.name = os.path.basename(path)
-
 
 
     def __unicode__(self):
@@ -145,6 +173,7 @@ class DirProcessor(FilesProcessors):
             return True
 
     def process(self, dir):
+        #TODO fix it
         p = re.compile('^__rnm_(.+)')
         result = p.findall(dir.name)
         if result:
@@ -165,10 +194,14 @@ class TypicalFile(FilesProcessors):
 
     def check_is_need(self, file_system_elem):
         if (file_system_elem.is_file):
-            print('is file')
+            return True
+
+    def process(self, file):
+        self.processor.create_file(file)
 
 
 
+print (call("rm -rf result/*", shell=True))
 
 source = FilesSource(data)
 processor = Processor(data)
@@ -181,7 +214,6 @@ source.processor = processor
 source.get_files()
 
 
-print (call("rm -rf result/*", shell=True))
 
 class TestStringMethods(unittest.TestCase):
 
