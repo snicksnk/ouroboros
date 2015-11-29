@@ -2,8 +2,8 @@ import os, re
 import unittest, copy
 from jinja2 import Template
 from subprocess import call
-
-
+from processors import RepeatFile, TypicalFile, DirProcessor
+from filesystem import Dir, File
 
 data = {
     'source-path': '/var/www/urobo/template',
@@ -73,7 +73,7 @@ class FilesSource:
         return path[len(source_path)+1:]
 
 
-class Processor:
+class BornState:
     def __init__(self, config):
         self.config = config
         self.source_path = None
@@ -140,139 +140,10 @@ class Processor:
 
 
 
-
-class FileSystemElem(object):
-    is_dir = False
-    is_file = False
-
-    def __init__(self, path):
-        self._path = None
-        self.path = path
-        self.parent = None
-        self._save_path = None
-
-    @property
-    def save_path(self):
-        if not self._save_path:
-            return self.path
-        else:
-            return self._save_path
-
-    @save_path.setter
-    def save_path(self, save_path):
-        self._save_path = save_path
-
-    @property
-    def path(self):
-        return os.path.join(self.parent_dir, self.name)
-
-    @path.setter
-    def path(self, path):
-        self.parent_dir = os.path.dirname(path)
-        self.name = os.path.basename(path)
-
-
-    def __unicode__(self):
-        return self.path
-
-
-class Dir(FileSystemElem):
-    is_dir = True
-    pass
-
-
-class File(FileSystemElem):
-    is_file = True
-    pass
-
-
-
-
-
-class FilesProcessors:
-    def __init__(self, processor):
-        self.processor = processor
-
-
-class Config():
-    def __init__(self, config):
-        self.config = config
-
-
-
-class DirProcessor(FilesProcessors):
-    name = 'DirProcessor'
-
-    def check_is_need(self, file_system_elem):
-        if file_system_elem.is_dir:
-            return True
-
-    def process(self, dir):
-        #TODO fix it
-        p = re.compile('^__rnm_(.+)')
-        result = p.findall(dir.name)
-        if result:
-            math_text = result[0]
-            source_path = os.path.join(dir.parent_dir, dir.name)
-            real_name = os.path.join(dir.parent_dir, self.processor.config[math_text])
-            self.processor.add_dir_replace(source_path, real_name)
-        else:
-            pass
-
-        self.processor.create_dir(dir)
-        self.processor.current_dir = dir
-
-
-
-class RepeatFile(FilesProcessors):
-    name = 'RepeatFile'
-
-    def get_name_parts(self, file_system_elem):
-        p = re.compile('^__rpt_([^.]+)(.+)')
-        result = p.findall(file_system_elem.name)
-        if result:
-            return result[0][0], result[0][1]
-
-    def check_is_need(self, file_system_elem):
-        result = self.get_name_parts(file_system_elem)
-        if result:
-            return True
-
-    def process(self, file_system_elem):
-        config_name, file_name_part = self.get_name_parts(file_system_elem)
-        for name, data in self.processor.config[config_name].iteritems():
-            self.processor.config['_'+config_name] = data
-            new_file = copy.copy(file_system_elem)
-            new_file.save_path = os.path.join(new_file.parent_dir, name+file_name_part)
-            self.processor.create_file(new_file)
-
-
-class TypicalFile(FilesProcessors):
-    name = 'TypicalFile'
-
-    def check_is_need(self, file_system_elem):
-        if (file_system_elem.is_file):
-            return True
-
-    def process(self, file):
-        #TODO fix it. diff from dir
-        p = re.compile('^__rnm_([^.]+)(.+)')
-        result = p.findall(file.name)
-        if result:
-            #diff from dir
-            math_text = result[0][0]
-            source_path = os.path.join(file.parent_dir, file.name)
-            real_name = os.path.join(file.parent_dir, self.processor.config[math_text] + result[0][1])
-            self.processor.add_dir_replace(source_path, real_name)
-
-        self.processor.create_file(file)
-
-
-
 print (call("rm -rf result/*", shell=True))
 
 source = FilesSource(data)
-processor = Processor(data)
+processor = BornState(data)
 processor.target_path = 'result'
 processor.source_path = data['source-path']
 processor.add_file_processor(RepeatFile)
