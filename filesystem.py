@@ -1,4 +1,4 @@
-import os
+import os, re
 
 
 class FileSystemElem(object):
@@ -7,9 +7,13 @@ class FileSystemElem(object):
 
     def __init__(self, path):
         self._path = None
-        self.path = path
         self.parent = None
         self._save_path = None
+
+        self.directive_name = None
+        self.config_name = None
+        self.file_name_part = None
+        self.path = path
 
     @property
     def save_path(self):
@@ -30,7 +34,16 @@ class FileSystemElem(object):
     def path(self, path):
         self.parent_dir = os.path.dirname(path)
         self.name = os.path.basename(path)
+        self.get_name_parts()
 
+    #TODO to name setter
+    def get_name_parts(self):
+        p = re.compile('__([a-z]+)_([^_]+)_(.{0,})')
+        result = p.findall(self.name)
+        if result:
+            self.directive_name = result[0][0]
+            self.config_name = result[0][1]
+            self.file_name_part = result[0][2]
 
     def __unicode__(self):
         return self.path

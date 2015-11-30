@@ -9,22 +9,22 @@ data = {
     'source-path': '/var/www/urobo/template',
     'target-path': '/var/www/urobo/result',
     'module-name': 'Settings',
-    'controllers':
+    'controller':
     {
-        'index': {
+        'Index': {
             'index'
         },
-        'general': {
+        'General': {
             'actions': {
                 'index': "assa",
                 'save': "ssasa"
             }
         },
-        'blocking': {
+        'Blocking': {
             'actions': {
-                'index': "",
-                'search-user': "",
-                'comment': "",
+                'Index': "",
+                'Search-user': "",
+                'omment': "",
                 'message': ""
             }
         }
@@ -35,9 +35,19 @@ data = {
     'repository': {
         'Settings': ""
     },
-    'forms': {
-        "Settings":{
-
+    'form': {
+        "Settings": {
+            "rows": [
+                'email', 'password', 'azaza'
+            ],
+            "filter": 'Settings'
+        }
+    },
+    'filter': {
+        "Settings": {
+            'rows': [
+                'email', 'password', 'azaza'
+            ]
         }
     }
 
@@ -78,16 +88,15 @@ class BornState:
         self.config = config
         self.source_path = None
         self.target_path = None
-        self.processors = {}
+        self.processors = []
         self.current_dir = Dir(path='')
         self.replaces = {}
 
     def add_file_processor(self, file_processor):
-        self.processors[file_processor.name] = file_processor
+        self.processors.append(file_processor)
         pass
 
     def add_file(self, file_path):
-
         file = File(path=file_path)
         self.process_with_processors(file)
 
@@ -96,7 +105,7 @@ class BornState:
         self.process_with_processors(dir)
 
     def process_with_processors(self, file_system_elm):
-        for name, Processor in self.processors.iteritems():
+        for Processor in self.processors:
             processor = Processor(self)
             if processor.check_is_need(file_system_elm):
                 processor.process(file_system_elm)
@@ -115,7 +124,7 @@ class BornState:
     def create_dir(self, dir):
         path = self.replace_path_parts_by_replacers(dir)
         target_dir_path = os.path.join(self.target_path, path)
-        print 'create dir  ' + target_dir_path
+        print 'create dir %s' % target_dir_path
         os.makedirs(target_dir_path)
 
     def render_template(self, file_data):
@@ -135,7 +144,7 @@ class BornState:
 
         result_file = open(target_file_path, "w+")
 
-        print 'create file ' + target_file_path
+        print 'create file %s' % target_file_path
         result_file.write(rendered_data)
 
 

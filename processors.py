@@ -27,26 +27,22 @@ class DirProcessor(FilesProcessors):
         self.processor.create_dir(dir)
         self.processor.current_dir = dir
 
+
 class RepeatFile(FilesProcessors):
     name = 'RepeatFile'
 
-    def get_name_parts(self, file_system_elem):
-        p = re.compile('^__rpt_([^.]+)(.+)')
-        result = p.findall(file_system_elem.name)
-        if result:
-            return result[0][0], result[0][1]
+
 
     def check_is_need(self, file_system_elem):
-        result = self.get_name_parts(file_system_elem)
-        if result:
+        if file_system_elem.directive_name == 'rpt':
             return True
 
     def process(self, file_system_elem):
-        config_name, file_name_part = self.get_name_parts(file_system_elem)
-        for name, data in self.processor.config[config_name].iteritems():
-            self.processor.config['_'+config_name] = data
+        for name, data in self.processor.config[file_system_elem.config_name].iteritems():
+            self.processor.config['_' + file_system_elem.config_name] = data
+            self.processor.config['_' + file_system_elem.config_name + '_name'] = name
             new_file = copy.copy(file_system_elem)
-            new_file.save_path = os.path.join(new_file.parent_dir, name+file_name_part)
+            new_file.save_path = os.path.join(new_file.parent_dir, name + file_system_elem.file_name_part)
             self.processor.create_file(new_file)
 
 
@@ -54,7 +50,7 @@ class TypicalFile(FilesProcessors):
     name = 'TypicalFile'
 
     def check_is_need(self, file_system_elem):
-        if (file_system_elem.is_file):
+        if not file_system_elem.directive_name and file_system_elem.is_file:
             return True
 
     def process(self, file):
