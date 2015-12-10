@@ -46,6 +46,17 @@ class RepeatFile(FilesProcessors):
             self.processor.create_file(new_file)
 
 
+class RenameFile(FilesProcessors):
+    name = 'RenameFile'
+
+    def check_is_need(self, file_system_elem):
+        if file_system_elem.directive_name == 'rnm':
+           return True
+
+    def process(self, file):
+        print "I must rename %s" % file.name
+
+
 class TypicalFile(FilesProcessors):
     name = 'TypicalFile'
 
@@ -59,6 +70,7 @@ class TypicalFile(FilesProcessors):
         result = p.findall(file.name)
         if result:
             #diff from dir
+            print result
             math_text = result[0][0]
             source_path = os.path.join(file.parent_dir, file.name)
             real_name = os.path.join(file.parent_dir, self.processor.config[math_text] + result[0][1])

@@ -2,13 +2,13 @@ import os, re
 import unittest, copy
 from jinja2 import Template
 from subprocess import call
-from processors import RepeatFile, TypicalFile, DirProcessor
+from processors import RepeatFile, TypicalFile, DirProcessor, RenameFile
 from filesystem import Dir, File
 
 data = {
-    'source-path': '/var/www/urobo/template',
-    'target-path': '/var/www/urobo/result',
-    'module-name': 'Settings',
+    'source_path': '/var/www/urobo/template',
+    'target_path': '/var/www/urobo/result',
+    'module_name': 'Settings',
     'controller':
     {
         'Index': {
@@ -23,7 +23,7 @@ data = {
         'Blocking': {
             'actions': {
                 'Index': "",
-                'Search-user': "",
+                'Search_user': "",
                 'omment': "",
                 'message': ""
             }
@@ -56,7 +56,7 @@ data = {
 
 class FilesSource:
     def __init__(self, config):
-        self.rootDir = config['source-path']
+        self.rootDir = config['source_path']
         self.__processor = None
 
     @property
@@ -129,7 +129,7 @@ class BornState:
 
     def render_template(self, file_data):
         template = Template(file_data.decode('utf-8'))
-        return template.render(__config=self.config)
+        return template.render(__config=self.config, **self.config)
 
     def create_file(self, file):
 
@@ -154,8 +154,9 @@ print (call("rm -rf result/*", shell=True))
 source = FilesSource(data)
 processor = BornState(data)
 processor.target_path = 'result'
-processor.source_path = data['source-path']
+processor.source_path = data['source_path']
 processor.add_file_processor(RepeatFile)
+processor.add_file_processor(RenameFile)
 processor.add_file_processor(TypicalFile)
 processor.add_file_processor(DirProcessor)
 
