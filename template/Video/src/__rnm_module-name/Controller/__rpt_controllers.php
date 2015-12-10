@@ -1,4 +1,0 @@
-<?php
-sasa
-sasa
-sa
