@@ -12,7 +12,8 @@ data = {
     'controller':
     {
         'Index': {
-            'index'
+            'index',
+	    'User'
         },
         'General': {
             'actions': {
